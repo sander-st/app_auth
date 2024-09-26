@@ -1,0 +1,30 @@
+{
+  "name": "auth-crud",
+  "version": "1.0.0",
+  "description": "Application for authentication and CRUD operations",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file=.env ./src/app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@getbrevo/brevo": "2.2.0",
+    "bcrypt": "5.1.1",
+    "cookie-parser": "1.4.6",
+    "cors": "2.8.5",
+    "express": "4.21.0",
+    "jsonwebtoken": "9.0.2",
+    "morgan": "1.10.0",
+    "mysql2": "3.11.3",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "standard": "17.1.2"
+  },
+  "eslintConfig": {
+    "extends": "standard"
+  }
+}

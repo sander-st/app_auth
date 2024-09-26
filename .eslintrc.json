@@ -1,0 +1,18 @@
+{
+  "extends": "standard",
+  "rules": {
+    "quotes": "off",
+    "semi": "off",
+    "no-unused-vars": "warn",
+    "no-multiple-empty-lines": ["error", { "max": 2 }],
+    "space-before-function-paren": [
+      "error",
+      {
+        "anonymous": "always",
+        "named": "never",
+        "asyncArrow": "always"
+      }
+    ],
+    "comma-dangle": "off"
+  }
+}
