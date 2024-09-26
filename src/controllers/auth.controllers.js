@@ -33,3 +33,22 @@ export const login = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const logout = (req, res) => {
+  res.clearCookie("__session");
+  res.json({
+    message: "Logout successfully",
+    succes: false,
+  });
+};
+
+export const verifyUser = (req, res) => {
+  const { dataUser } = req;
+  const data = {
+    userProfile: dataUser,
+    succes: true,
+    verifiedUser: true,
+    message: "User verified successfully",
+  };
+  res.json(data);
+};
