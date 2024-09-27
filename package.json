@@ -5,6 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "start": "node --env-file=.env ./src/app.js",
     "dev": "node --watch --env-file=.env ./src/app.js"
   },
   "keywords": [],

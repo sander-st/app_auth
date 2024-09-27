@@ -13,13 +13,12 @@ Esta aplicación es un sistema de autenticación de usuarios con característica
 
 ## Tecnologías utilizadas
 
-- **Node.js**: Entorno de ejecución de JavaScript.
+- **Node.js**: Entorno de ejecución de JavaScript `v22.9.0`.
 - **Express.js**: Framework para la creación de APIs.
 - **Brevo (anteriormente Sendinblue)**: API de terceros para el envío de correos electrónicos.
 - **MySQL**: Base de datos para almacenar información de los usuarios.
 - **JWT (JSON Web Tokens)**: Autenticación basada en tokens.
 - **bcrypt**: Para el hashing seguro de contraseñas.
-- **dotenv**: Para manejar variables de entorno.
 
 ## Instalación
 
@@ -41,13 +40,21 @@ npm install
 Crea un archivo `.env` en el directorio raíz y agrega las siguientes variables de entorno:
 
 ```bash
-API_KEY_BREVO=tu_api_key
+PORT=3000
+
+# mysql connect
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=your_database
+
+# jwt key
+JWT_SECRET_KEY="yoursecret"
+
+# api key brevo
+API_KEY_BREVO=your_api_key_brevo
 DOMINIO_MAIL=tu_dominio_de_correo
-JWT_SECRET=tu_secreto_jwt
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=nombre_de_base_de_datos
 ```
 
 4. **Inicializar la base de datos**
