@@ -17,7 +17,7 @@ router.post("/login", validateAuthFields, login);
 
 router.get("/logout", logout);
 
-router.get("/autenticate", authVerifyToken, verifyUser);
+router.get("/authenticate", authVerifyToken, verifyUser);
 
 router.patch("/validateuser", authVerifyToken, validateAuthCode);
 
