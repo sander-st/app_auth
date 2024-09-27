@@ -5,43 +5,42 @@ import { generateToken } from "../utils/jwt.js";
 import { sendEmail } from "../api/brevo/brevo.connection.js";
 
 export const userRegister = async (dataUser) => {
-  const { fullname, email, passwd } = dataUser;
-
   let connection;
   try {
     // encriptamos la contraseña
-    const passwdHash = await hashPassword(passwd);
+    const passwdHash = await hashPassword(dataUser.passwd);
 
     connection = await pool.getConnection();
 
     const __id = randomUUID();
-    const verificationCode = Math.floor(Math.random() * 900000) + 100000;
+    const generateRandomCode = Math.floor(Math.random() * 900000) + 100000;
 
     await connection.query(
       "INSERT INTO register (id, fullname, email , passwd, verificationCode, timeExpirationCode) VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))",
-      [__id, fullname, email, passwdHash, verificationCode]
+      [__id, dataUser.fullname, dataUser.email, passwdHash, generateRandomCode]
     );
 
     const [rows] = await connection.query(
-      "SELECT id, fullname, email, passwd, verificationCode, verifiedUser FROM register WHERE id = ?",
+      "SELECT id, fullname, email, verificationCode, verifiedUser FROM register WHERE id = ?",
       [__id]
     );
 
+    const { id, fullname, email, verificationCode, verifiedUser } = rows[0];
     // generamos el token
     const dataToken = {
-      userId: rows[0].id,
-      fullname: rows[0].fullname,
-      email: rows[0].email,
-      verifiedUser: Boolean(rows[0].verifiedUser),
+      userId: id,
+      fullname,
+      email,
+      verifiedUser: Boolean(verifiedUser),
     };
     const token = generateToken(dataToken);
 
     // enviamos el correo de verificación
     await sendEmail({
-      email: rows[0].email,
+      email,
       subject: "Verifque su correo electronico",
-      name: rows[0].fullname,
-      verificationCode: rows[0].verificationCode,
+      name: fullname,
+      verificationCode,
     });
 
     return {
@@ -58,35 +57,37 @@ export const userRegister = async (dataUser) => {
 };
 
 export const userLogin = async (dataUser) => {
-  const { email, passwd } = dataUser;
-
   let connection;
   try {
     connection = await pool.getConnection();
 
     const [result] = await connection.query(
       "SELECT id, email, passwd, fullname, verifiedUser FROM register WHERE email = ?",
-      [email]
+      [dataUser.email]
     );
 
     // validamos si el usuario existe
     if (!result.length) throw new Error("User not found");
 
-    // validamos la contraseña
-    const isMatch = await comparePassword(passwd, result[0].passwd);
+    const { id, fullname, email, verifiedUser, passwd } = result[0];
+
+    const userProfile = {
+      userId: id,
+      email,
+      fullname,
+      verifiedUser: Boolean(verifiedUser),
+    };
+
+    // validamos la contraseña y generamos token en paralelo
+    const [isMatch, token] = await Promise.all([
+      comparePassword(dataUser.passwd, passwd),
+      generateToken(userProfile),
+    ]);
+
     if (!isMatch) throw new Error("Invalid password");
 
-    const data = {
-      userId: result[0].id,
-      email: result[0].email,
-      fullname: result[0].fullname,
-      verifiedUser: Boolean(result[0].verifiedUser),
-    };
-    // generamos el token
-    const token = generateToken(data);
-
     return {
-      userProfile: data,
+      userProfile,
       token,
       success: true,
       message: "User logged successfully",
@@ -103,21 +104,25 @@ export const validateCode = async ({ dataUser, code }) => {
   let connection;
   try {
     connection = await pool.getConnection();
+    await connection.beginTransaction();
+
     const [result] = await connection.query(
       "SELECT id, verificationCode, timeExpirationCode FROM register WHERE id = ?",
       [userId]
     );
 
-    const { timeExpirationCode, verificationCode } = result[0];
-    // validar si el tiempo de expiracion de codigo es menor o igual a la fecha actual
-    const currentValidateDate =
-      Date.now() > new Date(timeExpirationCode).getTime();
-    if (currentValidateDate) throw new Error("Code expired");
+    const user = result[0];
+    if (!user) throw new Error("User not found");
 
-    // validar si el codigo es igual al enviado
+    const { timeExpirationCode, verificationCode } = user;
+
+    // validar si el tiempo de expiracion de codigo es menor o igual a la fecha actual
+    if (Date.now() > new Date(timeExpirationCode).getTime()) {
+      throw new Error("Code expired");
+    }
+
     if (code !== verificationCode) throw new Error("Invalid code");
 
-    // actualizar el estado de verificado
     await connection.query(
       "UPDATE register SET verifiedUser = TRUE WHERE id = ?",
       [userId]
@@ -125,12 +130,15 @@ export const validateCode = async ({ dataUser, code }) => {
 
     dataUser.verifiedUser = true;
 
+    await connection.commit();
+
     return {
       userProfile: dataUser,
       success: true,
       message: "Code validated successfully",
     };
   } catch (error) {
+    if (connection) await connection.rollback();
     throw new Error(`Verification code validation failed: ${error.message}`);
   } finally {
     if (connection) connection.release();
