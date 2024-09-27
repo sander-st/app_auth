@@ -3,7 +3,7 @@ import { validateToken } from "../utils/jwt.js";
 export const authVerifyToken = (req, res, next) => {
   const { __session } = req.cookies;
   if (!__session) {
-    return res.status(404).json({ error: "Unauthorized" });
+    return res.status(404).json({ error: "Token not found" });
   }
 
   const payload = validateToken(__session);

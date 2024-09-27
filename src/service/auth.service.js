@@ -23,7 +23,7 @@ export const userRegister = async (dataUser) => {
     );
 
     const [rows] = await connection.query(
-      "SELECT id, fullname, email, passwd, verificationCode, timeExpirationCode, verifiedUser FROM register WHERE id = ?",
+      "SELECT id, fullname, email, passwd, verificationCode, verifiedUser FROM register WHERE id = ?",
       [__id]
     );
 
@@ -32,6 +32,7 @@ export const userRegister = async (dataUser) => {
       userId: rows[0].id,
       fullname: rows[0].fullname,
       email: rows[0].email,
+      verifiedUser: Boolean(rows[0].verifiedUser),
     };
     const token = generateToken(dataToken);
 
@@ -46,7 +47,6 @@ export const userRegister = async (dataUser) => {
     return {
       userProfile: dataToken,
       token,
-      verifiedUser: Boolean(rows[0].verifiedUser),
       success: true,
       message: "User created successfully",
     };
@@ -80,6 +80,7 @@ export const userLogin = async (dataUser) => {
       userId: result[0].id,
       email: result[0].email,
       fullname: result[0].fullname,
+      verifiedUser: Boolean(result[0].verifiedUser),
     };
     // generamos el token
     const token = generateToken(data);
@@ -88,11 +89,49 @@ export const userLogin = async (dataUser) => {
       userProfile: data,
       token,
       success: true,
-      verifiedUser: Boolean(result[0].verifiedUser),
       message: "User logged successfully",
     };
   } catch (error) {
     throw new Error(`User login failed: ${error.message}`);
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+export const validateCode = async ({ dataUser, code }) => {
+  const { userId } = dataUser;
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    const [result] = await connection.query(
+      "SELECT id, verificationCode, timeExpirationCode FROM register WHERE id = ?",
+      [userId]
+    );
+
+    const { timeExpirationCode, verificationCode } = result[0];
+    // validar si el tiempo de expiracion de codigo es menor o igual a la fecha actual
+    const currentValidateDate =
+      Date.now() > new Date(timeExpirationCode).getTime();
+    if (currentValidateDate) throw new Error("Code expired");
+
+    // validar si el codigo es igual al enviado
+    if (code !== verificationCode) throw new Error("Invalid code");
+
+    // actualizar el estado de verificado
+    await connection.query(
+      "UPDATE register SET verifiedUser = TRUE WHERE id = ?",
+      [userId]
+    );
+
+    dataUser.verifiedUser = true;
+
+    return {
+      userProfile: dataUser,
+      success: true,
+      message: "Code validated successfully",
+    };
+  } catch (error) {
+    throw new Error(`Verification code validation failed: ${error.message}`);
   } finally {
     if (connection) connection.release();
   }

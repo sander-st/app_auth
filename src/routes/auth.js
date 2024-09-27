@@ -4,6 +4,7 @@ import {
   register,
   logout,
   verifyUser,
+  validateAuthCode,
 } from "../controllers/auth.controllers.js";
 import { validateAuthFields } from "../middleware/validateAuthFields.js";
 import { authVerifyToken } from "../middleware/auth.verifyToken.js";
@@ -17,5 +18,7 @@ router.post("/login", validateAuthFields, login);
 router.get("/logout", logout);
 
 router.get("/autenticate", authVerifyToken, verifyUser);
+
+router.patch("/validateuser", authVerifyToken, validateAuthCode);
 
 export { router };

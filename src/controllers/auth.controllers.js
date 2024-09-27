@@ -1,4 +1,8 @@
-import { userLogin, userRegister } from "../service/auth.service.js";
+import {
+  userLogin,
+  userRegister,
+  validateCode,
+} from "../service/auth.service.js";
 
 export const register = async (req, res) => {
   const { dataUser } = req;
@@ -47,8 +51,18 @@ export const verifyUser = (req, res) => {
   const data = {
     userProfile: dataUser,
     succes: true,
-    verifiedUser: true,
     message: "User verified successfully",
   };
   res.json(data);
+};
+
+export const validateAuthCode = async (req, res) => {
+  const { dataUser } = req;
+  const { code } = req.body;
+  try {
+    const result = await validateCode({ dataUser, code });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
