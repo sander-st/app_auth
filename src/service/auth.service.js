@@ -40,7 +40,10 @@ export const userRegister = async (dataUser) => {
       email,
       subject: "Verifque su correo electronico",
       name: fullname,
-      verificationCode,
+      type: "verification", // el tipo de email que se va enviar
+      variables: {
+        code: verificationCode,
+      },
     });
 
     return {

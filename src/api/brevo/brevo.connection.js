@@ -1,5 +1,6 @@
 import brevo from "@getbrevo/brevo";
-import { TEMPLATE_EMAIL_VERIFIED } from "./emailTemplate.js";
+import { EMAIL_TEMPLATES } from "./emailTemplate.js";
+import { replaceTemplate } from "../../utils/FG.js";
 
 const { API_KEY_BREVO, DOMINIO_MAIL } = process.env;
 
@@ -10,25 +11,21 @@ apiInstance.setApiKey(
   API_KEY_BREVO
 );
 
-export const sendEmail = async (data) => {
-  const { email, subject, name, verificationCode } = data;
-
+export const sendEmail = async ({ email, subject, name, type, variables }) => {
   try {
     const sendSmptEmail = new brevo.SendSmtpEmail();
 
+    const template = EMAIL_TEMPLATES[type];
+
     sendSmptEmail.subject = subject;
     sendSmptEmail.to = [{ email, name }];
-    sendSmptEmail.htmlContent = TEMPLATE_EMAIL_VERIFIED.replace(
-      "{VERIFICATION_CODE}",
-      verificationCode
-    );
+    sendSmptEmail.htmlContent = replaceTemplate(template, variables);
     sendSmptEmail.sender = {
       name: "service auth",
       email: DOMINIO_MAIL,
     };
 
-    const result = await apiInstance.sendTransacEmail(sendSmptEmail);
-    return result;
+    return await apiInstance.sendTransacEmail(sendSmptEmail);
   } catch (error) {
     console.error(`Error sending email: ${error.message}`);
     throw new Error(error.message);
