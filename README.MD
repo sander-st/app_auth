@@ -25,8 +25,8 @@ Esta aplicación es un sistema de autenticación de usuarios con característica
 1. **Clonar el repositorio**
 
    ```bash
-   git clone https://github.com/tu-usuario/nombre-repositorio.git
-   cd nombre-repositorio
+   git clone https://github.com/sander-st/app_auth.git
+   cd app_auth
    ```
 
 2. **Instalar dependencias**
