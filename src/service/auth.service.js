@@ -27,13 +27,13 @@ export const userRegister = async (dataUser) => {
 
     const { id, fullname, email, verificationCode, verifiedUser } = rows[0];
     // generamos el token
-    const dataToken = {
+    const userProfile = {
       userId: id,
       fullname,
       email,
       verifiedUser: Boolean(verifiedUser),
     };
-    const token = generateToken(dataToken);
+    const token = generateToken(userProfile);
 
     // enviamos el correo de verificación
     await sendEmail({
@@ -44,7 +44,7 @@ export const userRegister = async (dataUser) => {
     });
 
     return {
-      userProfile: dataToken,
+      userProfile,
       token,
       success: true,
       message: "User created successfully",
