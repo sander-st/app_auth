@@ -2,6 +2,8 @@ import {
   userLogin,
   userRegister,
   validateCode,
+  userForgotPassword,
+  userResetPassword,
 } from "../service/auth.service.js";
 
 export const register = async (req, res) => {
@@ -61,6 +63,28 @@ export const validateAuthCode = async (req, res) => {
   const { code } = req.body;
   try {
     const result = await validateCode({ dataUser, code });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const URL_HOST = `${req.protocol}://${req.get("host")}`;
+    const { email } = req.body;
+    const result = await userForgotPassword(email, URL_HOST);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  const { updatedPasswd } = req;
+  const { token } = req.query;
+  try {
+    const result = await userResetPassword(token, updatedPasswd);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });

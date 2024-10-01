@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomBytes } from "node:crypto";
 import { pool } from "../db/mysql.connect.js";
 import { hashPassword, comparePassword } from "../utils/bcrypt.js";
 import { generateToken } from "../utils/jwt.js";
@@ -143,6 +143,109 @@ export const validateCode = async ({ dataUser, code }) => {
   } catch (error) {
     if (connection) await connection.rollback();
     throw new Error(`Verification code validation failed: ${error.message}`);
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+export const userForgotPassword = async (email, URL_HOST) => {
+  let connection;
+
+  try {
+    connection = await pool.getConnection();
+    // await connection.beginTransaction();
+    const [result] = await connection.query(
+      "SELECT id, fullname, email FROM register WHERE email = ?",
+      [email]
+    );
+
+    if (!result.length) throw new Error("User not found");
+
+    const { id, fullname } = result[0];
+
+    const resetToken = randomBytes(20).toString("hex");
+    const tableID = randomUUID();
+
+    await connection.query(
+      "INSERT INTO password_resets (id, userId, resetToken, resetTokenExpiration) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))",
+      [tableID, id, resetToken]
+    );
+
+    await sendEmail({
+      email,
+      subject: "Reestablezca su contraseña",
+      name: fullname,
+      type: "forgotPassword", // el tipo de email que se va enviar
+      variables: {
+        name: fullname,
+        url: `${URL_HOST}/resetpassword?token=${resetToken}`,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Revise su correo electronico para reestablecer su contraseña",
+    };
+  } catch (error) {
+    throw new Error(`User forgot password failed: ${error.message}`); // fixerror
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+export const userResetPassword = async (resetToken, passwd) => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+
+    await connection.beginTransaction();
+
+    // validar el token de reestablecimiento de contraseña
+    const [result] = await connection.query(
+      "SELECT resetToken, userId FROM password_resets WHERE resetToken = ? AND resetTokenExpiration > NOW()",
+      [resetToken]
+    );
+
+    if (!result.length) throw new Error("Invalid reset token or expired");
+
+    const { userId } = result[0];
+    const passwdHash = await hashPassword(passwd);
+
+    await connection.query("UPDATE register SET passwd = ? WHERE id = ?", [
+      passwdHash,
+      userId,
+    ]);
+
+    await connection.query("DELETE FROM password_resets WHERE resetToken = ?", [
+      resetToken,
+    ]);
+
+    const [userDate] = await connection.query(
+      "SELECT fullname, email FROM register WHERE id = ?",
+      [userId]
+    );
+
+    await connection.commit();
+
+    const { fullname, email } = userDate[0];
+
+    await sendEmail({
+      email,
+      subject: "Su contraseña ha sido reestablecida",
+      name: fullname,
+      type: "succesChangePassword",
+      variables: {
+        name: fullname,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Password reset successfully",
+    };
+  } catch (error) {
+    if (connection) await connection.rollback();
+    throw new Error(`Password reset failed: ${error.message}`);
   } finally {
     if (connection) connection.release();
   }

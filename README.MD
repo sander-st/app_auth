@@ -19,6 +19,7 @@ Esta aplicación es un sistema de autenticación de usuarios con característica
 - **MySQL**: Base de datos para almacenar información de los usuarios.
 - **JWT (JSON Web Tokens)**: Autenticación basada en tokens.
 - **bcrypt**: Para el hashing seguro de contraseñas.
+- **zod**: Para la validación de los datos de entrada.
 
 ## Instalación
 
@@ -60,6 +61,8 @@ DOMINIO_MAIL=tu_dominio_de_correo
 4. **Inicializar la base de datos**
 
 Asegúrate de que tienes una base de datos MySQL configurada y ejecuta el script SQL para crear las tablas necesarias.
+
+revisa la estructura de tablas creado en la base de datos en el directorio `./src/db/schema.sql`.
 
 5. **Iniciar la aplicación**
 
@@ -104,6 +107,30 @@ npm start
 ```json
 {
   "email": "johndoe@example.com",
+  "passwd": "password123"
+}
+```
+
+### Olvidaste tu contraseña?
+
+- **Ruta**: `/forgotpassword`
+- **Método**: `POST`
+- **Cuerpo**:
+
+```json
+{
+  "email": "johndoe@example.com"
+}
+```
+
+### Restablecer contraseña
+
+- **Ruta**: `/resetpassword`
+- **Método**: `PATCH`
+- **Cuerpo**:
+
+```json
+{
   "passwd": "password123"
 }
 ```

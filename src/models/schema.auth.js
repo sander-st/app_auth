@@ -15,3 +15,13 @@ export const authRegisterSchema = z.object({
 });
 
 export const authLoginSchema = authRegisterSchema.omit({ fullname: true });
+
+export const authForgotPasswordSchema = authRegisterSchema.omit({
+  fullname: true,
+  passwd: true,
+});
+
+export const authResetPasswordSchema = authRegisterSchema.omit({
+  fullname: true,
+  email: true,
+});

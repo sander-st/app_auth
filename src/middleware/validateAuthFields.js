@@ -1,4 +1,9 @@
-import { authLoginSchema, authRegisterSchema } from "../models/schema.auth.js";
+import {
+  authLoginSchema,
+  authRegisterSchema,
+  authForgotPasswordSchema,
+  authResetPasswordSchema,
+} from "../models/schema.auth.js";
 
 export const validateAuthFields = (req, res, next) => {
   const { body, path } = req;
@@ -11,6 +16,14 @@ export const validateAuthFields = (req, res, next) => {
     } else if (path === "/login") {
       const data = authLoginSchema.parse(body);
       req.dataUser = data;
+      next();
+    } else if (path === "/forgotpassword") {
+      const data = authForgotPasswordSchema.parse(body);
+      req.email = data.email;
+      next();
+    } else if (path === "/resetpassword") {
+      const data = authResetPasswordSchema.parse(body);
+      req.updatedPasswd = data.passwd;
       next();
     }
   } catch (error) {
