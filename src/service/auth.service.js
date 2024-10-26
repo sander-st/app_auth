@@ -3,11 +3,17 @@ import { pool } from "../db/mysql.connect.js";
 import { hashPassword, comparePassword } from "../utils/bcrypt.js";
 import { generateToken } from "../utils/jwt.js";
 import { sendEmail } from "../api/brevo/brevo.connection.js";
+import {
+  ServerInternalError,
+  NotFoundError,
+  UnauthorizedError,
+  ConflictError,
+  BadRequestError,
+} from "../utils/errorCall.js";
 
 export const userRegister = async (dataUser) => {
   let connection;
   try {
-    // encriptamos la contraseña
     const passwdHash = await hashPassword(dataUser.passwd);
 
     connection = await pool.getConnection();
@@ -53,53 +59,49 @@ export const userRegister = async (dataUser) => {
       message: "User created successfully",
     };
   } catch (error) {
-    throw new Error(`User registration failed: ${error.message}`);
+    if (error instanceof Error) throw new ConflictError(error.message);
+    throw new ServerInternalError(error.message);
   } finally {
-    if (connection) connection.release();
+    connection.release();
   }
 };
 
 export const userLogin = async (dataUser) => {
-  let connection;
-  try {
-    connection = await pool.getConnection();
+  const connection = await pool.getConnection();
 
-    const [result] = await connection.query(
-      "SELECT id, email, passwd, fullname, verifiedUser FROM register WHERE email = ?",
-      [dataUser.email]
-    );
+  const [result] = await connection.query(
+    "SELECT id, email, passwd, fullname, verifiedUser FROM register WHERE email = ?",
+    [dataUser.email]
+  );
 
-    // validamos si el usuario existe
-    if (!result.length) throw new Error("User not found");
+  // validamos si el usuario existe
+  if (!result.length) throw new NotFoundError("User not found");
 
-    const { id, fullname, email, verifiedUser, passwd } = result[0];
+  const { id, fullname, email, verifiedUser, passwd } = result[0];
 
-    const userProfile = {
-      userId: id,
-      email,
-      fullname,
-      verifiedUser: Boolean(verifiedUser),
-    };
+  const userProfile = {
+    userId: id,
+    email,
+    fullname,
+    verifiedUser: Boolean(verifiedUser),
+  };
 
-    // validamos la contraseña y generamos token en paralelo
-    const [isMatch, token] = await Promise.all([
-      comparePassword(dataUser.passwd, passwd),
-      generateToken(userProfile),
-    ]);
+  // validamos la contraseña y generamos token en paralelo
+  const [isMatch, token] = await Promise.all([
+    comparePassword(dataUser.passwd, passwd),
+    generateToken(userProfile),
+  ]);
 
-    if (!isMatch) throw new Error("Invalid password");
+  if (!isMatch) throw new UnauthorizedError("Invalid password");
 
-    return {
-      userProfile,
-      token,
-      success: true,
-      message: "User logged successfully",
-    };
-  } catch (error) {
-    throw new Error(`User login failed: ${error.message}`);
-  } finally {
-    if (connection) connection.release();
-  }
+  connection.release();
+
+  return {
+    userProfile,
+    token,
+    success: true,
+    message: "User logged successfully",
+  };
 };
 
 export const validateCode = async ({ dataUser, code }) => {
@@ -115,16 +117,16 @@ export const validateCode = async ({ dataUser, code }) => {
     );
 
     const user = result[0];
-    if (!user) throw new Error("User not found");
+    if (!user) throw new NotFoundError("User not found");
 
     const { timeExpirationCode, verificationCode } = user;
 
     // validar si el tiempo de expiracion de codigo es menor o igual a la fecha actual
     if (Date.now() > new Date(timeExpirationCode).getTime()) {
-      throw new Error("Code expired");
+      throw new BadRequestError("Code expired");
     }
 
-    if (code !== verificationCode) throw new Error("Invalid code");
+    if (code !== verificationCode) throw new BadRequestError("Invalid code");
 
     await connection.query(
       "UPDATE register SET verifiedUser = TRUE WHERE id = ?",
@@ -142,7 +144,8 @@ export const validateCode = async ({ dataUser, code }) => {
     };
   } catch (error) {
     if (connection) await connection.rollback();
-    throw new Error(`Verification code validation failed: ${error.message}`);
+    if (error instanceof ServerInternalError) throw error;
+    throw new ServerInternalError("Server internal error");
   } finally {
     if (connection) connection.release();
   }
@@ -159,7 +162,9 @@ export const userForgotPassword = async (email, URL_HOST) => {
       [email]
     );
 
-    if (!result.length) throw new Error("User not found");
+    if (!result.length) {
+      throw new NotFoundError("User forgot password failed: User not found");
+    }
 
     const { id, fullname } = result[0];
 
@@ -187,7 +192,8 @@ export const userForgotPassword = async (email, URL_HOST) => {
       message: "Revise su correo electronico para reestablecer su contraseña",
     };
   } catch (error) {
-    throw new Error(`User forgot password failed: ${error.message}`); // fixerror
+    if (error instanceof ServerInternalError) throw error;
+    throw new ServerInternalError("Server internal error");
   } finally {
     if (connection) connection.release();
   }
@@ -206,7 +212,11 @@ export const userResetPassword = async (resetToken, passwd) => {
       [resetToken]
     );
 
-    if (!result.length) throw new Error("Invalid reset token or expired");
+    if (!result.length) {
+      throw new BadRequestError(
+        "User reset password failed: Invalid reset token or expired"
+      );
+    }
 
     const { userId } = result[0];
     const passwdHash = await hashPassword(passwd);
@@ -245,7 +255,8 @@ export const userResetPassword = async (resetToken, passwd) => {
     };
   } catch (error) {
     if (connection) await connection.rollback();
-    throw new Error(`Password reset failed: ${error.message}`);
+    if (error instanceof ServerInternalError) throw error;
+    throw new ServerInternalError("Server internal error");
   } finally {
     if (connection) connection.release();
   }
