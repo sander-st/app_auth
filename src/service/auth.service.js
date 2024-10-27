@@ -11,7 +11,7 @@ import {
   BadRequestError,
 } from "../utils/errorCall.js";
 
-export const userRegister = async (dataUser) => {
+const register = async (dataUser) => {
   let connection;
   try {
     const passwdHash = await hashPassword(dataUser.passwd);
@@ -66,7 +66,7 @@ export const userRegister = async (dataUser) => {
   }
 };
 
-export const userLogin = async (dataUser) => {
+const login = async (dataUser) => {
   const connection = await pool.getConnection();
 
   const [result] = await connection.query(
@@ -104,7 +104,7 @@ export const userLogin = async (dataUser) => {
   };
 };
 
-export const validateCode = async ({ dataUser, code }) => {
+const validateCode = async ({ dataUser, code }) => {
   const { userId } = dataUser;
   let connection;
   try {
@@ -151,7 +151,7 @@ export const validateCode = async ({ dataUser, code }) => {
   }
 };
 
-export const userForgotPassword = async (email, URL_HOST) => {
+const forgotPassword = async (email, URL_HOST) => {
   let connection;
 
   try {
@@ -199,7 +199,7 @@ export const userForgotPassword = async (email, URL_HOST) => {
   }
 };
 
-export const userResetPassword = async (resetToken, passwd) => {
+const resetPassword = async (resetToken, passwd) => {
   let connection;
   try {
     connection = await pool.getConnection();
@@ -260,4 +260,12 @@ export const userResetPassword = async (resetToken, passwd) => {
   } finally {
     if (connection) connection.release();
   }
+};
+
+export const authService = {
+  register,
+  login,
+  forgotPassword,
+  resetPassword,
+  validateCode,
 };

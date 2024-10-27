@@ -1,15 +1,9 @@
-import {
-  userLogin,
-  userRegister,
-  validateCode,
-  userForgotPassword,
-  userResetPassword,
-} from "../service/auth.service.js";
+import { authService } from "../service/index.js";
 
 export const register = async (req, res) => {
   const { dataUser } = req;
 
-  const { token, ...data } = await userRegister(dataUser);
+  const { token, ...data } = await authService.register(dataUser);
   res.cookie("__session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -22,7 +16,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   const { dataUser } = req;
 
-  const { token, ...data } = await userLogin(dataUser);
+  const { token, ...data } = await authService.login(dataUser);
   res.cookie("__session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -53,20 +47,20 @@ export const verifyUser = (req, res) => {
 export const validateAuthCode = async (req, res) => {
   const { dataUser } = req;
   const { code } = req.body;
-  const result = await validateCode({ dataUser, code });
+  const result = await authService.validateCode({ dataUser, code });
   res.json(result);
 };
 
 export const forgotPassword = async (req, res) => {
   const URL_HOST = `${req.protocol}://${req.get("host")}`;
   const { email } = req.body;
-  const result = await userForgotPassword(email, URL_HOST);
+  const result = await authService.forgotPassword(email, URL_HOST);
   res.json(result);
 };
 
 export const resetPassword = async (req, res) => {
   const { updatedPasswd } = req;
   const { token } = req.query;
-  const result = await userResetPassword(token, updatedPasswd);
+  const result = await authService.resetPassword(token, updatedPasswd);
   res.json(result);
 };
